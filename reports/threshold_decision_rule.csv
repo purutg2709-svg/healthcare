@@ -1,0 +1,7 @@
+ratio_range_low,ratio_range_high,recommended_threshold
+0.0,1.5,0.45
+1.5,2.5,0.35
+2.5,4.0,0.25
+4.0,7.0,0.15
+7.0,15.0,0.1
+15.0,999.0,0.05
