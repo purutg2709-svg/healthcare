@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.scoring import DEFAULT_THRESHOLD  # noqa: E402
 from app.shared import get_dates, get_model, get_scored  # noqa: E402
+from app.theme import inject_brutalist_css, kpi, section_label  # noqa: E402
 
 # Deterministic synthetic waiting list (NOT real patients). Fixed order,
 # never regenerated randomly.
@@ -150,9 +151,9 @@ def metrics(state):
 
 # ---------------------------------------------------------------- UI
 def render_recover():
-    st.title("Slot Recovery")
-    st.subheader("Simulate how an available appointment slot could be reassigned.")
-    st.caption("DEMO / SIMULATION — synthetic recovery workflow. No real scheduling integration.")
+    inject_brutalist_css()
+    st.title("SLOT RECOVERY")
+    st.caption("REASSIGN OPEN CAPACITY. DEMO / SIMULATION.")
     st.caption("Use the sidebar to switch between dashboard modules.")
     st.caption(
         "The model identifies appointments with elevated predicted no-show risk. "
@@ -166,18 +167,23 @@ def render_recover():
 
     model = get_model()
     scored = get_scored(model)
-    threshold = st.slider("High-risk threshold", 0.05, 0.75, DEFAULT_THRESHOLD, 0.01)
+    threshold = st.slider("HIGH-RISK THRESHOLD", 0.05, 0.75, DEFAULT_THRESHOLD, 0.01)
     flagged = scored[scored["predicted_no_show_probability"] >= threshold]
     eligible_ids = set(flagged["AppointmentID"]) - set(state["slots"])
 
     m = metrics(state)
+    section_label(1, "recovery queue")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Slots released", m["released"])
-    c2.metric("Slots recovered", m["recovered"])
-    c3.metric("Slots still open", m["open"])
-    c4.metric("Recovery rate", f"{m['rate']:.1%}")
+    with c1:
+        kpi(f"{m['released']}", "released")
+    with c2:
+        kpi(f"{m['recovered']}", "recovered")
+    with c3:
+        kpi(f"{m['open']}", "open")
+    with c4:
+        kpi(f"{m['rate']:.1%}", "recovery rate")
 
-    st.subheader("Flagged appointment")
+    section_label(2, "flagged appointment")
     if eligible_ids:
         pick = st.selectbox("Select a flagged appointment", sorted(eligible_ids))
         row = flagged[flagged["AppointmentID"] == pick].iloc[0]
@@ -194,13 +200,13 @@ def render_recover():
     else:
         st.info("No unreleased flagged appointments at this threshold.")
 
-    st.subheader("Available slot")
+    section_label(3, "available slot")
     actionable = {k: s for k, s in state["slots"].items() if s["status"] in ("AVAILABLE", "OPEN")}
     if actionable:
         sel = st.selectbox("Released slot", sorted(actionable))
         slot = state["slots"][sel]
         st.write(f"Slot: {sel} · Status: {slot['status']} · Risk: {slot['risk']:.1%}")
-        st.subheader("Synthetic waiting list")
+        section_label(4, "synthetic waiting list")
         st.caption("Synthetic waiting list — demonstration data.")
         w = next_waiting_patient(state, slot)
         if w:
@@ -217,7 +223,7 @@ def render_recover():
 
     if state["offer"]:
         o = state["offer"]
-        st.subheader("Offer")
+        section_label(5, "offer")
         st.write(f"{o['wait_id']} · Status: OFFERED (demo — no message was sent)")
         b1, b2 = st.columns(2)
         if b1.button("Accept"):
@@ -229,7 +235,7 @@ def render_recover():
             st.success(msg) if ok else st.warning(msg)
             st.rerun()
 
-    st.subheader("Recovery audit trail")
+    section_label(6, "recovery audit trail")
     st.caption("Demo audit trail only — not a compliance record.")
     audit = pd.DataFrame(state["audit"],
                          columns=["timestamp", "appointment", "risk", "action", "patient", "outcome"])
@@ -237,5 +243,5 @@ def render_recover():
 
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="Slot Recovery", layout="wide")
+    st.set_page_config(layout="wide", page_title="No-Show Ops", page_icon=None)
     render_recover()

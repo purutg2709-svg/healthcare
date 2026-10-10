@@ -2,9 +2,9 @@
 
 Run: streamlit run app/main.py
 
-Pages: Overview (here) + Predict + Recover + Pharmacy + Narcotics (reused as functions).
+Pages: Overview (here) + Predict + Recover (reused as functions).
 Scoring lives in app/scoring.py; cached loading in app/shared.py.
-No ML logic in this file.
+Styling lives in app/theme.py. No ML logic in this file.
 """
 
 import sys
@@ -14,63 +14,67 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.narcotics import render_narcotics  # noqa: E402
-from app.pharmacy import render_pharmacy  # noqa: E402
 from app.predict import render_predict  # noqa: E402
 from app.recover import init_state, metrics, render_recover  # noqa: E402
 from app.scoring import DEFAULT_THRESHOLD  # noqa: E402
 from app.shared import get_model, get_scored  # noqa: E402
+from app.theme import inject_brutalist_css, kpi, section_label  # noqa: E402
 
 
 def render_overview():
-    st.title("Hospital Operations Dashboard")
-    st.subheader("Predict appointment no-show risk and simulate capacity recovery.")
-    st.caption("DEMO / SIMULATION — hackathon demonstration, not a live hospital system.")
+    inject_brutalist_css()
+    st.title("NO-SHOW OPS")
+    st.caption("PREDICT RISK. RECOVER CAPACITY. DEMO / SIMULATION.")
 
     scored = get_scored(get_model())
     proba = scored["predicted_no_show_probability"]
-    flagged = (proba >= DEFAULT_THRESHOLD).sum()
+    flagged = int((proba >= DEFAULT_THRESHOLD).sum())
     rec = st.session_state.get("rec")
     recovered = metrics(rec)["recovered"] if rec else 0
 
+    section_label(1, "risk overview")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total appointments scored", f"{len(scored):,}")
-    c2.metric("High-risk appointments", f"{int(flagged):,}")
-    c3.metric("High-risk %", f"{flagged / len(scored):.1%}")
-    c4.metric("Slots recovered", f"{recovered}")
+    with c1:
+        kpi(f"{len(scored):,}", "scored")
+    with c2:
+        kpi(f"{flagged:,}", "high-risk", alert=True)
+    with c3:
+        kpi(f"{flagged / len(scored):.1%}", "high-risk %")
+    with c4:
+        kpi(f"{recovered}", "recovered")
 
-    st.subheader("Today's workflow")
-    st.write("**PREDICT** — Identify appointments with elevated predicted no-show risk.")
-    st.write("↓")
-    st.write("**RECOVER** — Simulate reassignment of capacity if a slot becomes available.")
-    st.caption("Prediction estimates risk; it does not confirm a cancellation.")
+    section_label(2, "operations flow")
+    st.write("PREDICT — FLAG HIGH-RISK APPOINTMENTS.")
+    st.write("RECOVER — REASSIGN OPEN CAPACITY.")
+    st.caption("RISK ESTIMATE ONLY. NOT A CONFIRMED NO-SHOW.")
 
     b1, b2 = st.columns(2)
-    # Internal navigation: stay inside main.py so Recover session state survives.
-    if b1.button("Go to Predict 🎯"):
-        st.session_state.nav_page = "🎯 Predict"
+    # Internal navigation: stash the target and rerun; it is applied to
+    # nav_page BEFORE the radio widget instantiates (assigning nav_page
+    # after instantiation raises StreamlitWidgetAlreadyInstantiatedError).
+    if b1.button("PREDICT NO-SHOW"):
+        st.session_state._goto = "PREDICT"
         st.rerun()
-    if b2.button("Go to Recover 🔄"):
-        st.session_state.nav_page = "🔄 Recover"
+    if b2.button("RECOVERY ACTIONS"):
+        st.session_state._goto = "RECOVER"
         st.rerun()
 
 
-st.set_page_config(page_title="Hospital Operations Dashboard", layout="wide")
-st.sidebar.title("🏥 Hospital Operations")
+st.set_page_config(layout="wide", page_title="No-Show Ops", page_icon=None)
+inject_brutalist_css()
+st.sidebar.title("NO-SHOW OPS")
 st.sidebar.caption("DEMO / SIMULATION")
 if "nav_page" not in st.session_state:
-    st.session_state.nav_page = "🏠 Overview"
+    st.session_state.nav_page = "OVERVIEW"
+if "_goto" in st.session_state:
+    st.session_state.nav_page = st.session_state.pop("_goto")
 page = st.sidebar.radio(
-    "Navigation", ["🏠 Overview", "🎯 Predict", "🔄 Recover", "💊 Pharmacy", "📋 Narcotics Report"],
+    "Navigation", ["OVERVIEW", "PREDICT", "RECOVER"],
     label_visibility="collapsed", key="nav_page",
 )
-if page == "🏠 Overview":
+if page == "OVERVIEW":
     render_overview()
-elif page == "🎯 Predict":
+elif page == "PREDICT":
     render_predict()
-elif page == "🔄 Recover":
-    render_recover()
-elif page == "💊 Pharmacy":
-    render_pharmacy()
 else:
-    render_narcotics()
+    render_recover()
