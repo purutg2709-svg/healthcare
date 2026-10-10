@@ -12,7 +12,7 @@ import streamlit as st
 
 from app.scoring import DEFAULT_THRESHOLD, load_model, score_appointments
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "appointments_v3.csv"
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "appointments_v3.csv"
 
 
 @st.cache_resource

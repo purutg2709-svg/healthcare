@@ -45,10 +45,9 @@ models/
   best_calibrated.joblib               # earlier experiment artifact
   logreg_baseline.joblib               # earlier experiment artifact
   v3_ablated_no_history.joblib         # earlier experiment artifact
-appointments_v3.csv      # main dataset used by the app
-cleaned_appointments.csv # earlier cleaning step (older version)
-appointments_v2.csv      # earlier feature set (older version)
-appointments_feature_engineered_v2.csv  # earlier feature set (older version)
+data/
+  appointments_v3.csv  # main dataset used by the app
+  archive/             # older versions (v2, cleaned, feature-engineered)
 reports/       # metrics, comparisons, and figures from experiments
 docs/screenshots/  # demo screenshots
 requirements.txt  # Python dependencies
@@ -59,7 +58,7 @@ README.md         # this file
 
 1. Clone the repo:
 ```
-git clone https://github.com/[USERNAME]/healthcare.git
+git clone https://github.com/purutg2709-svg/healthcare.git
 cd healthcare
 ```
 2. Create a virtual environment:
